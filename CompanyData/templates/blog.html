@@ -1,0 +1,15 @@
+{% extends "base.html" %} 
+{% load staticfiles %} 
+
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-body card-padding">
+        
+            {{ blog.content|safe }}
+        </div>
+    </div>
+</div>
+{% endblock %} 
+

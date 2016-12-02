@@ -1,0 +1,15 @@
+.login-error-message {
+	position: absolute; 
+	width: 100%;
+	bottom: 60px;
+}
+
+.login-error-message .alert {
+	width: 50%;
+	margin: 0 auto;
+}
+
+.post-id {
+	cursor: pointer;
+	/*color: lightblue;*/
+}

@@ -1,0 +1,78 @@
+{% extends "base.html" %} 
+{% load staticfiles %} 
+
+{% block extra_css %}
+    <link href="/static/vendors/bootgrid/jquery.bootgrid.min.css" rel="stylesheet"> 
+{% endblock %} 
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <h2>Comment List for Post ({{post_id}})</h2>
+        </div>
+        <table id="data-table-command" class="table table-striped table-vmiddle">
+            <thead>
+                <tr>
+                    <td data-column-id="id" data-identifier="true">id</td>
+                    <th data-column-id="parent_id" data-visible="false">Parent Id</th>
+                    <th data-column-id="comment_message" data-formatter="message">Message</th>
+                    <th data-column-id="comment_author">Author</th>
+                    <th data-column-id="comment_published">Published</th>
+                    <th data-column-id="comment_likes" data-type="numeric" data-visible="false">Likes</th>
+                    <th data-column-id="commands" data-formatter="commands" data-sortable="false">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in comments %}
+                <tr>
+                    <td>{{item.comment_id}}</td>
+                    <td>{{item.parent_id}}</td>
+                    <td>{{item.comment_message}}</td>
+                    <td>{{item.comment_author}}</td>
+                    <td>{{item.comment_published}}</td>
+                    <td>{{item.comment_likes}}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script src="/static/vendors/bootgrid/jquery.bootgrid.updated.min.js"></script>
+<script src="/static/js/fb_post.js"></script>
+<!-- Data Table -->
+<script type="text/javascript">
+var csrf_token = '{{ csrf_token }}';
+
+$(document).ready(function() {
+    //Command Buttons
+    var grid = $("#data-table-command").bootgrid({
+        caseSensitive: false,
+        css: {
+            icon: 'zmdi icon',
+            iconColumns: 'zmdi-view-module',
+            iconDown: 'zmdi-expand-more',
+            iconRefresh: 'zmdi-refresh',
+            iconUp: 'zmdi-expand-less'
+        },
+        rowCount: [-1, 20, 50, 100],
+        formatters: {
+            "commands": function(column, row) {
+                action_html = "<button type=\"button\" class=\"btn btn-icon command-edit waves-effect waves-circle\" data-row-id=\"" + row.id + "\"><span class=\"zmdi zmdi-edit\"></span></button> ";
+                return action_html;
+            },
+            "message": function(column, row) {
+                action_html = "<div data-toggle=\"tooltip\" data-placement=\"top\" title=\""+row.comment_message.replace('"', '')+"\">"+row.comment_message+"</div>";
+                return action_html;
+            }
+        }
+    }).on("loaded.rs.jquery.bootgrid", function() {
+        /* Executes after data is loaded and rendered */
+        grid.find(".command-edit").on("click", function(e) {
+            location.href = "/comment/" + $(this).data("row-id") + "/edit";
+        });
+    });
+});
+</script>
+{% endblock %}

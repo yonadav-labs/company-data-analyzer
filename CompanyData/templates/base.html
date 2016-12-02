@@ -1,0 +1,196 @@
+{% load socialaccount %}
+<!DOCTYPE html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>CloudData</title>
+    
+        <!-- Vendor CSS -->
+        <link href="/static/vendors/bower_components/animate.css/animate.min.css" rel="stylesheet">
+        <link href="/static/vendors/bower_components/bootstrap-sweetalert/lib/sweet-alert.css" rel="stylesheet">
+        <link href="/static/vendors/bower_components/material-design-iconic-font/dist/css/material-design-iconic-font.min.css" rel="stylesheet">
+        <link href="/static/vendors/bower_components/malihu-custom-scrollbar-plugin/jquery.mCustomScrollbar.min.css" rel="stylesheet">        
+        {% block extra_css %}
+        {% endblock %}
+        <!-- CSS -->
+        <link href="/static/css/app.min.1.css" rel="stylesheet">
+        <link href="/static/css/app.min.2.css" rel="stylesheet">
+        <link href="/static/css/fb_post.css" rel="stylesheet">
+        
+        <!-- Google Tag Manager -->
+        <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer','GTM-5KPFQF');</script>
+        <!-- End Google Tag Manager -->        
+    </head>
+
+    {% block body_block %}
+    <body>
+        <header id="header" class="clearfix" data-current-skin="blue">
+            <ul class="header-inner">
+                <li id="menu-trigger" data-trigger="#sidebar">
+                    <div class="line-wrap">
+                        <div class="line top"></div>
+                        <div class="line center"></div>
+                        <div class="line bottom"></div>
+                    </div>
+                </li>
+
+                <li class="logo hidden-xs">
+                    <a href="/" style="height:53px;">
+                        <span> CloudyData</span>
+                    </a>
+                </li>
+
+                <li class="pull-right">
+                    <ul class="top-menu">
+<!--                         <li>
+                            <a href="{# % provider_login_url "facebook" % #}" class="btn bgm-indigo">
+                                <i class="zmdi zmdi-facebook zmdi-hc-fw"></i> | Connect Facebook Account
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/blog/faq" class="btn bgm-teal">
+                                FAQ
+                            </a>
+                        </li>
+ -->                        <li id="toggle-width">
+                            <div class="toggle-switch m-l-20">
+                                <input id="tw-switch" type="checkbox" hidden="hidden">
+                                <label for="tw-switch" class="ts-helper"></label>
+                            </div>
+                        </li>
+
+                        <li id="top-search">
+                            <a href=""><i class="tm-icon zmdi zmdi-search"></i></a>
+                        </li>
+
+                        <li class="dropdown">
+                            <a data-toggle="dropdown" href=""><i class="tm-icon zmdi zmdi-more-vert"></i></a>
+                            <ul class="dropdown-menu dm-icon pull-right">
+                                <li class="skin-switch hidden-xs">
+                                    <span class="ss-skin bgm-lightblue" data-skin="lightblue"></span>
+                                    <span class="ss-skin bgm-bluegray" data-skin="bluegray"></span>
+                                    <span class="ss-skin bgm-cyan" data-skin="cyan"></span>
+                                    <span class="ss-skin bgm-teal" data-skin="teal"></span>
+                                    <span class="ss-skin bgm-orange" data-skin="orange"></span>
+                                    <span class="ss-skin bgm-blue" data-skin="blue"></span>
+                                </li>
+                                <li class="divider hidden-xs"></li>
+                                <li class="hidden-xs">
+                                    <a data-action="fullscreen" href=""><i class="zmdi zmdi-fullscreen"></i> Toggle Fullscreen</a>
+                                </li>
+                                <li>
+                                    <a href=""><i class="zmdi zmdi-face"></i> Privacy Settings</a>
+                                </li>
+                                <li>
+                                    <a href=""><i class="zmdi zmdi-settings"></i> Other Settings</a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+
+            <!-- Top Search Content -->
+            <div id="top-search-wrap">
+                <div class="tsw-inner">
+                    <i id="top-search-close" class="zmdi zmdi-arrow-left"></i>
+                    <input type="text">
+                </div>
+            </div>
+        </header>
+        
+        <section id="main">
+            <aside id="sidebar" class="sidebar c-overflow">
+                <div class="profile-menu">
+                    <a href>
+                        <div class="profile-info" style="margin-top: 5px;">
+                            {{ request.user }}
+                            <i class="zmdi zmdi-caret-down"></i>
+                        </div>
+                    </a>
+
+                    <ul class="main-menu">
+                        <li>
+                            <a href="#"><i class="zmdi zmdi-account"></i> View Profile</a>
+                        </li>
+                        <li>
+                            <a href="#"><i class="zmdi zmdi-settings"></i> Settings</a>
+                        </li>
+                        <li>
+                            <a href="/logout/"><i class="zmdi zmdi-time-restore"></i> Logout</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <ul class="main-menu">
+                    <li><a href="/"><i class="zmdi zmdi-home"></i> Queries</a></li>
+                    <li><a href="/post/all"><i class="zmdi zmdi-format-underlined"></i> Posts</a></li>
+                    <li><a href="/facebook"><i class="zmdi zmdi-assignment-account zmdi-hc-fw"></i> Manage Accounts</a></li>
+                </ul>
+            </aside>
+
+            <aside id="chat" class="sidebar c-overflow">
+
+                <div class="chat-search">
+                    <div class="fg-line">
+                        <input type="text" class="form-control" placeholder="Search People">
+                    </div>
+                </div>
+            </aside>
+            
+            <section id="content">
+                {% block content %}
+                {% endblock %}
+            </section>
+            
+        </section>
+        
+        <footer id="footer">
+            Copyright &copy; 2016 cloudydata.com
+            <!-- <a href="/blog/terms-of-service" class="m-l-30"><b>Terms of Service</b></a> -->
+        </footer>
+
+        <!-- Page Loader -->
+        <div class="page-loader">
+            <div class="preloader pls-blue">
+                <svg class="pl-circular" viewBox="25 25 50 50">
+                    <circle class="plc-path" cx="50" cy="50" r="20" />
+                </svg>
+
+                <p>Please wait...</p>
+            </div>
+        </div>
+
+        <!-- Javascript Libraries -->
+        <script src="/static/vendors/bower_components/jquery/dist/jquery.min.js"></script>
+        <script src="/static/vendors/bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+        
+        <script src="/static/vendors/bower_components/malihu-custom-scrollbar-plugin/jquery.mCustomScrollbar.concat.min.js"></script>
+        <script src="/static/vendors/bower_components/Waves/dist/waves.min.js"></script>
+        <script src="/static/vendors/bootstrap-growl/bootstrap-growl.min.js"></script>
+        <script src="/static/vendors/bower_components/bootstrap-sweetalert/lib/sweet-alert.min.js"></script>
+        
+        <!-- Placeholder for IE9 -->
+        <!--[if IE 9 ]>
+            <script src="/static/vendors/bower_components/jquery-placeholder/jquery.placeholder.min.js"></script>
+        <![endif]-->
+        
+        <script src="/static/js/functions.js"></script>
+        <script src="/static/js/fb_post.js"></script>
+        <!-- <script src="/static/js/demo.js"></script> -->
+
+        {% block extra_js %}
+        {% endblock %}    
+        <!-- Google Tag Manager (noscript) -->
+        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5KPFQF"
+        height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+        <!-- End Google Tag Manager (noscript) -->        
+    </body>
+    {% endblock %}    
+</html>

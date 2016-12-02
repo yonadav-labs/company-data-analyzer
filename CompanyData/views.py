@@ -13,6 +13,9 @@ from django.conf import settings
 from django.template.defaultfilters import slugify
 from django.http import HttpResponseRedirect, HttpResponse
 from django.forms.models import model_to_dict
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 
 from CompanyData.models import CompanyData
 
@@ -34,8 +37,9 @@ ORIGINAL_COLUMNS = ['Active Medstation', 'Alternate Items', 'Blocked Medstation'
                     'Total Scan Rate', 'Utilization']
 
 
+@login_required(login_url='/login/')
 def index(request):
-    return render(request, 'index.html')
+    return render(request, 'query.html')
 
 def get_report(request):
     company_id = request.POST.get('company_id')
@@ -230,3 +234,52 @@ def readdata():
     # print json.dumps(all_data.T.to_dict().values(), indent=4)
     return all_data.T.to_dict().values()
     # return all_data
+
+
+def user_login(request):
+    message = ''
+
+    if request.method == 'POST':
+        next_url = request.GET.get('next', '/')
+        username = request.POST['username']
+        password = request.POST['password']
+        user = authenticate(username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+            return HttpResponseRedirect(next_url)
+        else:
+            message = 'Your login credential is not correct! Please try again.'
+            
+    return render(request, 'login.html', {
+        'message': message,
+        'l_block': 'login'
+    })
+
+
+def user_signup(request):
+    message = ''
+
+    if request.method == 'POST':
+        username = request.POST['username']
+        email = request.POST['email']
+        password = request.POST['password']
+
+        try:
+            User.objects.create_user(username, email, password)
+            user = authenticate(username=username, password=password)
+            login(request, user)
+            return HttpResponseRedirect('/')
+        except Exception, e:
+            print e
+            message = 'Your username is already used. Please try with another one!'
+            
+    return render(request, 'login.html', {
+        'message': message,
+        'l_block': 'signup'
+    })
+
+
+def user_logout(request):
+    logout(request)
+    return HttpResponseRedirect('/login')

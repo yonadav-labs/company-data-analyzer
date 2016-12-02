@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load staticfiles %} 
+
+{% block extra_css %}
+    <link href="/static/vendors/summernote/dist/summernote.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    
+    <div class="card">
+        {{ form.errors}}
+        <form class="form-horizontal" role="form" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="card-header">
+                <h2>Comment Form <small>Fill the form to update the Comment.</small></h2>
+            </div>
+            
+            <div class="card-body card-padding">
+                <div class="form-group">
+                    <label for="inputEmail3" class="col-sm-2 control-label">Comment ID</label>
+                    <div class="col-sm-10">
+                        <div class="fg-line">
+                            <input type="text" class="form-control input-sm" id="id_subject" required name="subject" value="{{comment.comment_id}}">
+                        </div>
+                    </div>
+                </div>                 
+                <div class="form-group">
+                    <label for="inputEmail3" class="col-sm-2 control-label">Parent ID</label>
+                    <div class="col-sm-10">
+                        <div class="fg-line">
+                            <input type="text" class="form-control input-sm" id="id_placeholder" required name="placeholder" value="{{comment.parent_id}}">
+                        </div>
+                    </div>
+                </div>                 
+                <div class="form-group">
+                    <label for="inputEmail3" class="col-sm-2 control-label">Message</label>
+                    <div class="col-sm-10">
+                        <textarea class="html-editor" name="body">
+                            {{comment.comment_message|safe}}
+                        </textarea>
+                    </div>
+                </div>                 
+                                            
+                <div class="form-group">
+                    <label for="inputEmail3" class="col-sm-2 control-label">Author</label>
+                    <div class="col-sm-10">
+                        <div class="fg-line">
+                            <input type="text" class="form-control input-sm" id="id_placeholder" required name="placeholder" value="{{post.comment_author}}">
+                        </div>
+                    </div>
+                </div>                 
+                <div class="form-group">
+                    <label for="inputEmail3" class="col-sm-2 control-label">Published</label>
+                    <div class="col-sm-10">
+                        <div class="fg-line">
+                            <input type="text" class="form-control input-sm" id="id_placeholder" placeholder="Meta Key" required name="placeholder" value="{{comment.comment_published}}">
+                        </div>
+                    </div>
+                </div>                 
+                <div class="form-group">
+                    <label for="inputEmail3" class="col-sm-2 control-label">Likes</label>
+                    <div class="col-sm-10">
+                        <div class="fg-line">
+                            <input type="text" class="form-control input-sm" id="id_placeholder" placeholder="Meta Key" required name="placeholder" value="{{comment.comment_likes}}">
+                        </div>
+                    </div>
+                </div>                 
+                 
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-2">
+                        <button onclick="history.go(-1);" class="btn btn-default btn-sm">Close</button>
+                    </div>
+                </div>
+                <div class="clearfix"></div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="/static/vendors/bower_components/autosize/dist/autosize.min.js"></script>
+    <script src="/static/vendors/summernote/dist/summernote-updated.min.js"></script>
+{% endblock %}        

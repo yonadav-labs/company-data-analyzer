@@ -1,0 +1,100 @@
+{% extends "base.html" %} 
+{% load staticfiles %} 
+
+{% block extra_css %}
+    <link href="/static/vendors/bootgrid/jquery.bootgrid.min.css" rel="stylesheet"> 
+    <link href="/static/css/fb_post.css" rel="stylesheet"> 
+{% endblock %} 
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <h2>Post List for Query ({{query}})</h2>
+        </div>
+        <table id="data-table-command" class="table table-striped table-vmiddle">
+            <thead>
+                <tr>
+                    <td data-column-id="id" data-identifier="true" data-visible="false">id</td>
+                    <th data-column-id="status_type">type</th>
+                    <th data-column-id="status_message" data-formatter="message">message</th>
+                    <th data-column-id="link_name" data-visible="false">link_name</th>
+                    <th data-column-id="status_link">url</th>
+                    <th data-column-id="status_published">published</th>
+                    <th data-column-id="num_reactions" data-type="numeric" data-visible="false">reactions</th>
+                    <th data-column-id="num_comments" data-type="numeric">comments</th>
+                    <th data-column-id="num_shares" data-type="numeric">shares</th>
+                    <th data-column-id="num_likes" data-type="numeric">likes</th>
+                    <th data-column-id="num_loves" data-type="numeric" data-visible="false">loves</th>
+                    <th data-column-id="num_wows" data-type="numeric" data-visible="false">wows</th>
+                    <th data-column-id="num_hahas" data-type="numeric" data-visible="false">hahas</th>
+                    <th data-column-id="num_sads" data-type="numeric" data-visible="false">sads</th>
+                    <th data-column-id="num_angrys" data-type="numeric" data-visible="false">angrys</th>
+                    <th data-column-id="commands" data-formatter="commands" data-sortable="false">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in posts %}
+                <tr>
+                    <td>{{item.status_id}}</td>
+                    <td>{{item.status_type}}</td>
+                    <td>{{item.status_message}}</td>
+                    <td>{{item.link_name}}</td>
+                    <td>{{item.status_link}}</td>
+                    <td>{{item.status_published}}</td>
+                    <td>{{item.num_reactions}}</td>
+                    <td>{{item.num_comments}}</td>
+                    <td>{{item.num_shares}}</td>
+                    <td>{{item.num_likes}}</td>
+                    <td>{{item.num_loves}}</td>
+                    <td>{{item.num_wows}}</td>
+                    <td>{{item.num_hahas}}</td>
+                    <td>{{item.num_sads}}</td>
+                    <td>{{item.num_angrys}}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script src="/static/vendors/bootgrid/jquery.bootgrid.updated.min.js"></script>
+<script src="/static/js/fb_post.js"></script>
+<!-- Data Table -->
+<script type="text/javascript">
+var csrf_token = '{{ csrf_token }}';
+
+$(document).ready(function() {
+    //Command Buttons
+    var grid = $("#data-table-command").bootgrid({
+        caseSensitive: false,
+        css: {
+            icon: 'zmdi icon',
+            iconColumns: 'zmdi-view-module',
+            iconDown: 'zmdi-expand-more',
+            iconRefresh: 'zmdi-refresh',
+            iconUp: 'zmdi-expand-less'
+        },
+        rowCount: [-1, 20, 50, 100],
+        formatters: {
+            "commands": function(column, row) {
+                action_html = "<button type=\"button\" class=\"btn btn-icon command-edit waves-effect waves-circle\" data-row-id=\"" + row.id + "\"><span class=\"zmdi zmdi-edit\"></span></button> ";
+                action_html += "<button type=\"button\" class=\"btn btn-icon command-comments waves-effect waves-circle\" data-row-id=\"" + row.id + "\"><span class=\"zmdi zmdi-assignment\"></span></button> ";
+                return action_html;
+            },
+            "message": function(column, row) {
+                action_html = "<div data-toggle=\"tooltip\" data-placement=\"top\" title=\""+row.status_message.replace('"', '')+"\">"+row.status_message+"</div>";
+                return action_html;
+            }
+        }
+    }).on("loaded.rs.jquery.bootgrid", function() {
+        /* Executes after data is loaded and rendered */
+        grid.find(".command-edit").on("click", function(e) {
+            location.href = "/post/" + $(this).data("row-id") + "/edit";
+        }).end().find(".command-comments").on("click", function(e) {
+            show_comments($(this).data("row-id"));
+        });
+    });
+});
+</script>
+{% endblock %}
