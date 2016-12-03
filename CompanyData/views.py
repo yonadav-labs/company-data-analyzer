@@ -39,7 +39,7 @@ ORIGINAL_COLUMNS = ['Active Medstation', 'Alternate Items', 'Blocked Medstation'
 
 @login_required(login_url='/login/')
 def index(request):
-    return render(request, 'query.html')
+    return render(request, 'index.html')
 
 def get_report(request):
     company_id = request.POST.get('company_id')
