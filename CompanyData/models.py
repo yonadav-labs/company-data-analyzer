@@ -43,3 +43,7 @@ class CompanyData(models.Model):
 
     def __str__(self):
         return "{} - {}".format(self.report_date, self.companyid)
+
+    class Meta:
+        verbose_name = 'Company Data'
+        verbose_name_plural = 'Company Data'

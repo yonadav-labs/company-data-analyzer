@@ -19,8 +19,8 @@ from CompanyData import views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^$', views.index, name="index"),
     url(r'^upload', views.upload, name='upload'),
+    url(r'^$', views.upload, name="index"),
     url(r'^get_report', views.get_report, name="get_report"),
     url(r'^get_data', views.get_data, name="get_data"),
     url(r'^accounts/', include('allauth.urls')),

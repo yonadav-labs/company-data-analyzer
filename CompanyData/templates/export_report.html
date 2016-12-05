@@ -1,0 +1,22 @@
+{% extends "base.html" %} 
+{% load staticfiles %} 
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <h2>Export a report for a Company</h2>
+        </div>    
+
+        <div class="card-body card-padding" style="min-height: 360px;">
+            <form action="/get_report/" method="post">
+                {% csrf_token %}
+                <label>Company ID</label>
+                <input type="text" maxlength="50" name="company_id">
+                <input type="submit" value="Download Data">
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %} 
