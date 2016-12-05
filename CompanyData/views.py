@@ -3,19 +3,26 @@
 import pandas as pd
 import numpy as np
 
+import csv
 import glob
 import json
 import os, sys
 import datetime
+import mimetypes
 
+from django.utils.encoding import smart_str
 from django.shortcuts import render
 from django.conf import settings
 from django.template.defaultfilters import slugify
 from django.http import HttpResponseRedirect, HttpResponse
+from django.http import JsonResponse
 from django.forms.models import model_to_dict
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.files.storage import FileSystemStorage
+from django.views.decorators.csrf import csrf_exempt
+from wsgiref.util import FileWrapper
 
 from CompanyData.models import CompanyData
 
@@ -40,6 +47,64 @@ ORIGINAL_COLUMNS = ['Active Medstation', 'Alternate Items', 'Blocked Medstation'
 @login_required(login_url='/login/')
 def index(request):
     return render(request, 'index.html')
+
+
+@login_required(login_url='/login/')
+@csrf_exempt
+def upload(request):
+    if request.method == 'GET':
+        return render(request, 'upload.html')
+    else:
+        myfile = request.FILES['files[]']
+        # location = settings.BASE_DIR+"/media/test"
+        # fs = FileSystemStorage(location=location)
+        # filename = fs.save(myfile.name, myfile)
+
+        result = {}
+        result['name'] = myfile.name
+        result['type'] = 'CSV'
+        result['size'] = myfile.size
+        # result['url'] = fs.url(filename)
+
+        all_data = readdata(myfile)
+        # save to database
+        for item in all_data:
+            companydata = CompanyData(**item)
+            companydata.save()
+
+        return JsonResponse({'files': [result]}, safe=False)
+
+
+def get_data(request):
+    if request.method == 'GET':
+        return render(request, 'export_data.html')
+    else:
+        company_id = request.POST.get('company_id').strip()
+        company_data = CompanyData.objects.filter(companyid=company_id).order_by('-report_date')[:12]
+
+        if not company_data:
+            return HttpResponseRedirect('/get_data')        
+
+        path = settings.BASE_DIR+"/media/company_data/"+datetime.datetime.now().strftime("{} (%Y-%m-%d %H:%M:%S).csv".format(company_id))
+        result = open(path, 'w')
+
+        result_csv_fields = model_to_dict(company_data[0], exclude=['id']).keys()
+        result_csv = csv.DictWriter(result, fieldnames=result_csv_fields)
+        result_csv.writeheader()
+
+        for item in company_data:
+            result_csv.writerow(model_to_dict(item, exclude=['id']))
+
+        result.close()
+
+        wrapper = FileWrapper( open( path, "r" ) )
+        content_type = mimetypes.guess_type( path )[0]
+
+        response = HttpResponse(wrapper, content_type = content_type)
+        response['Content-Length'] = os.path.getsize( path ) # not FileField instance
+        response['Content-Disposition'] = 'attachment; filename=%s/' % smart_str( os.path.basename( path ) )
+        return response
+
 
 def get_report(request):
     company_id = request.POST.get('company_id')
@@ -185,46 +250,42 @@ def get_report(request):
 
     return render(request, 'index.html', { 'data': data })
 
-def import_db(request):
-    all_data = readdata()
-    # print json.dumps(all_data, indent=4)
-    for item in all_data:
-        companydata = CompanyData(**item)
-        companydata.save()
-    
-    return HttpResponseRedirect('/')
 
-
-def readdata():
+def readdata(csv_file):
     """
     Read monthly company data from local media and returns list of dictionary
     for storing into database
     """
     # Importing ALL Data and creating a Master DataFrame
     all_data = pd.DataFrame()
-    for f in glob.glob(settings.BASE_DIR+"/media/*MonthlyStatistics.*"):
-        date_str = f.split("/")[-1:][0][:7]
-        df = pd.read_csv(f)
-        
-        # Create the Datetime Stamp from the filename
-        df['Report Date'] = date_str+'-01'
-        # df['Report Date'] = str(pd.to_datetime(df['Report Date']))
-        
-        # Create the Company ID
-        company_id_list = []
-        for i in zip(list(df['Customer Name']), list(df['CA Acct #']),list(df['Main Acct #'])):
-            tmp_id = str(i[0])+str("_")+str(i[1])+str("_")+str(i[2])
-            company_id_list.append(tmp_id)
-        
-        # Company ID
-        df['CompanyID'] = company_id_list
-        
-        #Return the master dataframe
-        all_data = all_data.append(df,ignore_index=True)
+    # for f in glob.glob(settings.BASE_DIR+"/media/*MonthlyStatistics.*"):
+        # date_str = f.split("/")[-1:][0][:7]
+    date_str = csv_file.name[:7]
+    df = pd.read_csv(csv_file)
+    
+    # Create the Datetime Stamp from the filename
+    df['Report Date'] = date_str+'-01'
+    # df['Report Date'] = str(pd.to_datetime(df['Report Date']))
+    
+    # Create the Company ID
+    company_id_list = []
+    # for i in zip(list(df['Customer Name']), list(df['CA Acct #']),list(df['Main Acct #'])):    
+    for i in zip(list(df['Customer Name']), list(df['CA Acct #'])):
+        tmp_id = "{} {}".format(i[0], i[1])
+        company_id_list.append(tmp_id)
+    
+    # Company ID
+    df['CompanyID'] = company_id_list
+    
+    #Return the master dataframe
+    all_data = all_data.append(df,ignore_index=True)
         
     # Delete Unknown Field Name
     # Think this must be an import/ df.append issue (maybe you can figure it out)
-    del all_data['Unnamed: 0']
+    try:
+        del all_data['Unnamed: 0']
+    except Exception, e:
+        pass
     
     new_cols = []
     for item in all_data.columns:

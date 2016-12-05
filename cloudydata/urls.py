@@ -20,8 +20,9 @@ from CompanyData import views
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^$', views.index, name="index"),
-    url(r'^import_db', views.import_db, name="import_db"),
+    url(r'^upload', views.upload, name='upload'),
     url(r'^get_report', views.get_report, name="get_report"),
+    url(r'^get_data', views.get_data, name="get_data"),
     url(r'^accounts/', include('allauth.urls')),
 
     url(r'^login', views.user_login, name='user_login'),
