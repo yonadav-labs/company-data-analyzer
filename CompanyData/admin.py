@@ -1,5 +1,8 @@
 from django.contrib import admin
 from CompanyData.models import *
 
-admin.site.register(CompanyData)
+class CompanyAdmin(admin.ModelAdmin):	
+	search_fields = ['companyid']
+
+admin.site.register(CompanyData, CompanyAdmin)
 

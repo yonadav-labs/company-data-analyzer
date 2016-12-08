@@ -27,6 +27,14 @@ from wsgiref.util import FileWrapper
 from CompanyData.models import CompanyData
 
 
+from fuzzywuzzy import process
+
+from openpyxl import load_workbook
+from openpyxl.utils import coordinate_from_string, column_index_from_string
+from openpyxl.utils.cell import (_get_column_letter)
+from openpyxl.styles import Alignment
+
+
 ORIGINAL_COLUMNS = ['Active Medstation', 'Alternate Items', 'Blocked Medstation', 
                     'CA Acct #', 'CA Doses Dispensed', 'Active Formulary Items', 
                     'CA Lines Refilled', 'CA Refill Qty', 'CA Scan Qty', 
@@ -62,10 +70,17 @@ def upload(request):
         # result['url'] = fs.url(filename)
 
         all_data = read_data(myfile)
+
         # save to database
         for item in all_data:
-            companydata = CompanyData(**item)
-            companydata.save()
+            # get rid of junk
+            if item['companyid'] == 'nan {}'.format(item['ca_acct']):
+                continue
+
+            obj, created = CompanyData.objects.update_or_create(
+                companyid=item['companyid'], report_date=item['report_date'],
+                defaults=item,
+            )
 
         return JsonResponse({'files': [result]}, safe=False)
 
@@ -130,14 +145,21 @@ def get_report_(company_data):
     data = []
     for item in company_data:
         data.append(model_to_dict(item, exclude=['id']))
+
+    QUERY_SET_KEY_TO_COLS = get_key_to_cols(data)
+
     df = pd.DataFrame(data)
 
-    df.columns = ORIGINAL_COLUMNS        
-    df = df.drop('CompanyID', 1)
+    df.rename(index=str, columns=QUERY_SET_KEY_TO_COLS,inplace=True)
+
+    # df.columns = ORIGINAL_COLUMNS        
+    # df = df.drop('CompanyID', 1)
 
     # get file name
     # 2016-09 Monthly KPIs - Customer Name
     filename = settings.BASE_DIR+"/media/reports/"+"{} Monthly KPIs - {}.xlsx".format(list(df['Report Date'])[-1].strftime('%Y-%m'), df['Customer Name'][0])
+
+
     # format month names
     report_dates = [item.strftime('%b-%Y') for item in df['Report Date']]
     df = df.drop('Report Date', 1)
@@ -153,7 +175,10 @@ def get_report_(company_data):
                 'CA Scan Qty', 'CA Refill Qty', 'NON-CA Scan Qty',
                 'NON-CA Refill Qty', 'Total Scan Qty', 'Total Refill Qty']
     for srow in sum_rows:                    
-        dft.at[srow, 'YTD'] = dft.loc[srow].apply(pd.to_numeric).sum()
+        try:
+            dft.at[srow, 'YTD'] = dft.loc[srow].apply(pd.to_numeric).sum()
+        except Exception, e:
+            dft.at[srow, 'YTD'] = ''
 
     # calc division for YTD
     division_rows = [('CA Vend to Refill Ratio', 'CA Doses Dispensed', 'CA Lines Refilled'),
@@ -254,17 +279,15 @@ def get_report_(company_data):
     df_cy16.at['Total ADM Scan Rate', 'YTD']  = dft.at['Total Scan Rate', 'YTD']
 
     
-    writer = pd.ExcelWriter(filename) 
-    dft.to_excel(writer, "Data")
-    df_cy16.to_excel(writer, "CY16")
-    writer.save()
+    # Generate Report
+    report_from_template(df_cy16, filename)
 
     return filename
 
 
 def read_data(csv_file):
     """
-    Read monthly company data from local media and returns list of dictionary
+    Read monthly company data from csv file and returns list of dictionary
     for storing into database
     """
     # Importing ALL Data and creating a Master DataFrame
@@ -355,3 +378,143 @@ def user_signup(request):
 def user_logout(request):
     logout(request)
     return HttpResponseRedirect('/login')
+
+
+def get_all_cells_A1_reference_style(dimension):
+    start_column = re.sub(r"\d","",dimension.split(":")[0])
+    end_column = re.sub(r"\d","",dimension.split(":")[1])
+    
+    start_row = int(re.sub(r"[A-Z]","",dimension.split(":")[0]))
+    end_row = int(re.sub(r"[A-Z]","",dimension.split(":")[1]))
+
+    # Create Range of Columns
+    range_columns = []
+    for i in range(ord(start_column), ord(end_column)+1):
+        range_columns.append(chr(i))
+
+
+    # Create Range of Rows
+    range_rows = list(range(start_row,end_row+1))
+
+    # Create Master List Combining Range of Columns and Rows (should have created this using a list comprehension)
+    list_all_cells_in_worksheet = []
+    for c in range_columns:
+        for r in range_rows:
+            list_all_cells_in_worksheet.append(str(c)+str(r))
+
+    return list_all_cells_in_worksheet
+
+
+def report_from_template(df_cy16, filename):
+    # Load the Template
+    wb = load_workbook(settings.BASE_DIR+"/media/reports/KPI_Template.xlsx")
+
+    # select the sheet
+    ws = wb.get_sheet_by_name("CY16")
+
+    # Get the last row
+    end_row = ws.max_row
+
+    #####################################################################################################
+    #
+    # Integrate Code Above
+    #
+    #####################################################################################################
+
+    index_col_cells, col_rows = get_cell_refs_for_index_and_cols()
+
+    #####################################################################################################
+
+    # Styles
+    # We need to make sure to manually edit the template file that we are using in order to ensure that 
+    # our formatting during the script works appropriately
+
+    # Insert Column Headers
+    for i, col in enumerate(list(df_cy16.columns)):
+        ws[str(_get_column_letter(i+2)+"1")].value = col
+
+    # Index of DataFrame
+    zipped_ref_and_index_values = zip(index_col_cells,list(df_cy16.index))
+
+    for input_ref_value in zipped_ref_and_index_values: 
+        ws[input_ref_value[0]].value = input_ref_value[1]
+        ws[input_ref_value[0]].alignment = Alignment(horizontal='right') 
+
+    # All Columns in DataFrame
+    for i, col_name in enumerate(list(df_cy16.columns)):
+        col_cell_refs = [str(_get_column_letter(i+2)+row_ref) for row_ref in col_rows]
+        zipped_ref_and_col_values = zip(col_cell_refs,list(df_cy16.ix[:,i].values))
+
+        for input_ref_value in zipped_ref_and_col_values: 
+            ws[input_ref_value[0]].value = input_ref_value[1]
+            ws[input_ref_value[0]].alignment = Alignment(horizontal='right') 
+
+    # Insert Remaining Table Headers specific to this Table
+    table_headers = ['Program Summary','ADM Optimization','ADM Stock Outs','ADM Scan Rate on Refill Transactions']
+    table_headers_refs = ['A2','A8','A21','A32']
+    zipped_ref_and_table_headers = zip(table_headers_refs,table_headers)
+
+    for input_ref_value in zipped_ref_and_table_headers: 
+        ws[input_ref_value[0]].value = input_ref_value[1]
+        ws[input_ref_value[0]].alignment = Alignment(horizontal='right')
+
+    wb.save(filename)
+
+
+def get_cell_refs_for_index_and_cols():
+
+    # Load the Original workbook
+    wb = load_workbook(settings.BASE_DIR+"/media/reports/KPI_Template.xlsx")
+
+    # select the sheet
+    ws = wb.get_sheet_by_name("CY16")
+
+    # Get the last row
+    end_row = ws.max_row
+
+    # Get Index Mapping
+    index_col_cells_all = [str("A"+str(i)) for i in range(1,end_row+1)]
+
+    table_headers_or_None_index = [None,'Program Summary','ADM Optimization','ADM Stock Outs','ADM Scan Rate on Refill Transactions','=Data!B5']
+
+    index_col_cells = []
+    for cell in index_col_cells_all:
+        if ws[cell].value not in table_headers_or_None_index: 
+            index_col_cells.append(cell)
+
+    #Cells for which we need Index values inserted
+    # index_col_cells
+
+
+    # Get Column Mapping
+    col_cells_all = [str("D"+str(i)) for i in range(1,end_row+1)]
+
+    table_headers_or_None_cols = [None,'=Data!D1']
+
+    col_cells = []
+    for cell in col_cells_all:
+        if ws[cell].value not in table_headers_or_None_cols: 
+            col_cells.append(cell)
+
+    #Cell Rows for which we need Column values inserted
+    col_rows = [ref[1:] for ref in col_cells]
+
+    return index_col_cells, col_rows
+
+
+def get_key_to_cols(query_set):
+    query_set_keys = query_set[0].keys()
+    cols = []
+    for qsk in query_set_keys:
+        cols.append(process.extractOne(qsk,choices=ORIGINAL_COLUMNS,score_cutoff=70)[0])
+
+    # Create a dictionary mapping of these two lists
+    QUERY_SET_KEY_TO_COLS = dict(zip(query_set_keys, cols))
+
+    # Remove "companyid" from dictionary
+    QUERY_SET_KEY_TO_COLS.pop('companyid')
+
+    # Fix an error from the fuzzywuzzy matching in the dictionary
+    QUERY_SET_KEY_TO_COLS['ca_formulary'] = 'Active Formulary Items'
+    return QUERY_SET_KEY_TO_COLS
+
