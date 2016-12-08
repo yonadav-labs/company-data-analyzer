@@ -122,7 +122,7 @@ def get_report(request):
         return render(request, 'export_report.html')
     else:
         company_id = request.POST.get('company_id')
-        company_data = CompanyData.objects.filter(companyid=company_id).order_by('report_date')[:12]
+        company_data = CompanyData.objects.filter(companyid=company_id).order_by('report_date')[-12:]
 
         if not company_data:
             return HttpResponseRedirect('/get_report')
