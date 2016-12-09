@@ -33,6 +33,7 @@ from openpyxl import load_workbook
 from openpyxl.utils import coordinate_from_string, column_index_from_string
 from openpyxl.utils.cell import (_get_column_letter)
 from openpyxl.styles import Alignment
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 
 ORIGINAL_COLUMNS = ['Active Medstation', 'Alternate Items', 'Blocked Medstation', 
@@ -87,7 +88,9 @@ def upload(request):
 
 def get_data(request):
     if request.method == 'GET':
-        return render(request, 'export_data.html')
+        company_ids = CompanyData.objects.order_by('companyid') \
+            .values_list('companyid', flat=True).distinct()
+        return render(request, 'export_data.html', {"company_ids": company_ids})
     else:
         company_id = request.POST.get('company_id').strip()
         company_data = CompanyData.objects.filter(companyid=company_id).order_by('-report_date')[:12]
@@ -119,7 +122,9 @@ def get_data(request):
 @login_required(login_url='/login/')
 def get_report(request):
     if request.method == 'GET':
-        return render(request, 'export_report.html')
+        company_ids = CompanyData.objects.order_by('companyid') \
+            .values_list('companyid', flat=True).distinct()
+        return render(request, 'export_report.html', {"company_ids": company_ids})
     else:
         company_id = request.POST.get('company_id')
         company_data = list(CompanyData.objects.filter(companyid=company_id).order_by('report_date'))[-12:]
@@ -163,6 +168,7 @@ def get_report_(company_data):
     # format month names
     report_dates = [item.strftime('%b-%Y') for item in df['Report Date']]
     df = df.drop('Report Date', 1)
+    df = df.drop('companyid', 1)
     dft = df.T
     dft.columns = report_dates
     # add empty YTD column
@@ -189,7 +195,10 @@ def get_report_(company_data):
                      ('Total Scan Rate', 'Total Scan Qty', 'Total Refill Qty')]
 
     for drow in division_rows:
-        dft.at[drow[0], 'YTD'] = dft.at[drow[1], 'YTD'] / dft.at[drow[2], 'YTD']
+        try:
+            dft.at[drow[0], 'YTD'] = dft.at[drow[1], 'YTD'] / dft.at[drow[2], 'YTD']
+        except Exception, e:
+            dft.at[drow[0], 'YTD'] = ''
 
     # create CY16
     cy16_index = ['Active Items on CardinalASSIST® Formulary', 
@@ -225,7 +234,12 @@ def get_report_(company_data):
         df_cy16.at['Active Items on CardinalASSIST® Formulary', month]  = dft.at['Active Formulary Items', month]
         df_cy16.at['CardinalASSIST® Formulary Utilization', month]  = dft.at['Utilization', month]
         df_cy16.at['Total Lines Auto Replenished', month]  = dft.at['CA Lines Refilled', month]
-        df_cy16.at['Percent Reduction in Lines Refilled by CardinalASSIST®', month]  = (float(dft.at['Total Refills', month]) - float(dft.at['Non-CA Lines Refilled', month])) / float(dft.at['Total Refills', month])
+
+        try:
+            df_cy16.at['Percent Reduction in Lines Refilled by CardinalASSIST®', month] = (float(dft.at['Total Refills', month]) - float(dft.at['Non-CA Lines Refilled', month])) / float(dft.at['Total Refills', month])
+        except Exception, e:
+            df_cy16.at['Percent Reduction in Lines Refilled by CardinalASSIST®', month] = ''
+
         df_cy16.at['CardinalASSIST® Doses Dispensed', month]  = dft.at['CA Doses Dispensed', month]
         df_cy16.at['Non-CardinalASSIST® Doses Dispensed', month]  = dft.at['Non-CA Doses Dispensed', month]
         df_cy16.at['Total ADM Doses (Vends) Dispensed', month]  = float(dft.at['CA Doses Dispensed', month]) + float(dft.at['Non-CA Doses Dispensed', month])
@@ -280,7 +294,7 @@ def get_report_(company_data):
 
     
     # Generate Report
-    report_from_template(df_cy16, filename)
+    report_from_template(dft, df_cy16, filename)
 
     return filename
 
@@ -380,34 +394,16 @@ def user_logout(request):
     return HttpResponseRedirect('/login')
 
 
-def get_all_cells_A1_reference_style(dimension):
-    start_column = re.sub(r"\d","",dimension.split(":")[0])
-    end_column = re.sub(r"\d","",dimension.split(":")[1])
-    
-    start_row = int(re.sub(r"[A-Z]","",dimension.split(":")[0]))
-    end_row = int(re.sub(r"[A-Z]","",dimension.split(":")[1]))
-
-    # Create Range of Columns
-    range_columns = []
-    for i in range(ord(start_column), ord(end_column)+1):
-        range_columns.append(chr(i))
-
-
-    # Create Range of Rows
-    range_rows = list(range(start_row,end_row+1))
-
-    # Create Master List Combining Range of Columns and Rows (should have created this using a list comprehension)
-    list_all_cells_in_worksheet = []
-    for c in range_columns:
-        for r in range_rows:
-            list_all_cells_in_worksheet.append(str(c)+str(r))
-
-    return list_all_cells_in_worksheet
-
-
-def report_from_template(df_cy16, filename):
+def report_from_template(dft, df_cy16, filename):
     # Load the Template
     wb = load_workbook(settings.BASE_DIR+"/media/reports/KPI_Template.xlsx")
+
+    # select the data sheet
+    ws_data = wb.get_sheet_by_name("Data")
+    wb.remove_sheet(ws_data)    
+    ws_data = wb.create_sheet('Data', 0)
+    for r in dataframe_to_rows(dft, index=True, header=True):
+        ws_data.append(r)
 
     # select the sheet
     ws = wb.get_sheet_by_name("CY16")

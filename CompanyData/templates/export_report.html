@@ -14,8 +14,16 @@
                 <div class="form-group">
                     <label for="inputEmail3" class="col-sm-2 control-label">Company ID</label>
                     <div class="col-sm-4">
-                        <div class="fg-line">
-                            <input type="text" class="form-control input-sm" name="company_id" >
+                        <div class="form-group" style="margin-top: -8px;">
+                            <div class="fg-line">
+                                <div class="select">
+                                    <select class="form-control" name="company_id">
+                                    {% for item in company_ids %}
+                                        <option value="{{ item }}">{{ item }}</option>
+                                    {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="col-sm-2">
