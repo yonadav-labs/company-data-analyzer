@@ -29,6 +29,7 @@ from CompanyData.models import CompanyData
 
 from fuzzywuzzy import process
 
+import openpyxl
 from openpyxl import load_workbook
 from openpyxl.utils import coordinate_from_string, column_index_from_string
 from openpyxl.utils.cell import (_get_column_letter)
@@ -75,7 +76,7 @@ def upload(request):
         # save to database
         for item in all_data:
             # get rid of junk
-            if item['companyid'] == 'nan {}'.format(item['ca_acct']):
+            if item['companyid'] in ['nan {}'.format(item['ca_acct']), 'null {}'.format(item['ca_acct'])]:
                 continue
 
             obj, created = CompanyData.objects.update_or_create(
@@ -404,6 +405,11 @@ def report_from_template(dft, df_cy16, filename):
     ws_data = wb.create_sheet('Data', 0)
     for r in dataframe_to_rows(dft, index=True, header=True):
         ws_data.append(r)
+
+    # ws_chart = wb.create_sheet('Chart')
+    # img = openpyxl.drawing.image.Image('7.jpg')
+    # img.anchor(ws_chart.cell('C4'))
+    # ws_chart.add_image(img)
 
     # select the sheet
     ws = wb.get_sheet_by_name("CY16")
